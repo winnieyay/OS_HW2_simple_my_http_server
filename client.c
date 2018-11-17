@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
 
     printf("%s\n",file_or_dir);
     sprintf(request, "GET %s HTTP/1.x\r\nHOST: %s:%s\r\n",file_or_dir,local_input,port_input);
+
     //request = strcat(request,"GET ");
     //request = strcat(request,file_or_dir);
     printf("%s\n",request);
