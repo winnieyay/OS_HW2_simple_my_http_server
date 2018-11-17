@@ -11,13 +11,12 @@
 #include <pthread.h>
 
 
-char msg[10000];
+char msg[200];
 char get_rqst_data;
 struct sockaddr_in serverInfo,clientInfo;
 char *root;
 pthread_t main_thread;
 static pthread_mutex_t  lock = PTHREAD_MUTEX_INITIALIZER;
-
 //char *pathname;
 int sockfd = 0,forClientSockfd = 0;
 int addrlen;
@@ -56,7 +55,7 @@ int main(int argc, char *argv[])
     //usage : ./server -r root -p port -n thread number
     root = argv[2];
     memset(msg,0,sizeof(msg));
-
+    memset(msg,'\0',strlen(msg));
 
 
     //set up socket
@@ -186,7 +185,7 @@ void* threadpool_thread(void* args)
             printf("Get:%s\n",inputBuffer);
             Get_inform();
             memset(inputBuffer,0,sizeof(inputBuffer));
-            send(gan,message,sizeof(message),0);
+            //send(gan,message,sizeof(message),0);
         }
         //gan = Pop();
         //recv(gan,inputBuffer,sizeof(inputBuffer),0);
@@ -228,29 +227,43 @@ void Get_inform(void)
     if(stat(pathname,&sb) == 0 && S_ISDIR(sb.st_mode)) {
         printf("this is DIR\n");
         get_dir();
-
+        //send(sockfd,request,sizeof(request),0);
+        send(forClientSockfd,msg,sizeof(msg),0);
+        printf("this is msg: %s",msg);
     } else if(stat(pathname,&sb) == 0 && S_ISREG(sb.st_mode)) {
         printf("this is FILE\n");
         print_file();
+        send(forClientSockfd,buffer,sizeof(buffer),0);
     } else if(stat(pathname,&sb)!=0) {
         printf("nope\n");
     }
+    //printf("byee\n");
 }
 void get_dir()
 {
-
     DIR *d;
     struct dirent* dir;
+    memset(msg,0,sizeof(msg));
+
 
     d = opendir(pathname);
+
     if(d) {
         while((dir = readdir(d))!=NULL) {
-            if(strcmp(dir->d_name,".") && strcmp(dir->d_name,".."))
+            if(strcmp(dir->d_name,".") && strcmp(dir->d_name,"..")) {
+                char tmp[100];
                 printf("%s\n", dir->d_name);
+                sprintf(tmp, "%s ",dir->d_name);
+                strcat(msg,tmp);
+            }
+            //printf("in while \n");
         }
+        printf("this is msg: %s",msg);
         closedir(d);
+        //printf("this is msg: %s",msg);
     }
 
+    //printf("this is msg: %s",msg);
 
 }
 void print_file()
@@ -265,14 +278,14 @@ void print_file()
         x++;
     }
     fclose(file);
-
-    if(buffer) {
+    /*
+    if(buffer){
         printf("%s",buffer);
     }
+    */
 }
 void Push(int data)
 {
-
     if(Q_HEAD == NULL) {
         Q_HEAD = (struct node*)malloc(sizeof(struct node));
         Q_HEAD->data = data;
@@ -287,7 +300,6 @@ void Push(int data)
     }
     Q_NUM++;
 }
-
 int Pop(void)
 {
     struct node* ptr = Q_HEAD;
@@ -304,6 +316,5 @@ int isEmpty(void)
     } else {
         return 0;
     }
-
 }
 
