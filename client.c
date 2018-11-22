@@ -23,25 +23,24 @@ char content_line[1000000]= {};
 char dir_down[1000000]= {};
 char *file_or_dir;
 char *local_input;
-char *port_input;
+int port_input;
 char file_or_dir_tmp[100000];
 void* thread(void* args);
 static pthread_mutex_t  lock = PTHREAD_MUTEX_INITIALIZER;
 void _mkdir(const char *path);
-
+char addr[100000];
 int main(int argc, char *argv[])
 {
 
     file_or_dir = argv[2];
     local_input = argv[4];
-    port_input = argv[6];
+    //printf("done\n");
+    port_input = atoi(argv[6]);
+    //printf("done66\n");
     memset(request,0,sizeof(request));
-
+    //printf("port: %d\n",port_input);
     //printf("%s\n",file_or_dir);
-    sprintf(request, "GET %s HTTP/1.x\r\nHOST: %s:%s\r\n",file_or_dir,local_input,port_input);
-    //printf("%s\n",request);
-
-    //set up socket
+    sprintf(request, "GET %s HTTP/1.x\r\nHOST: %s:%d\r\n",file_or_dir,local_input,port_input);
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -56,8 +55,13 @@ int main(int argc, char *argv[])
     info.sin_family = AF_INET;
     int tm = 0;
     //localhost test
-    info.sin_addr.s_addr = inet_addr("127.0.0.1");
-    info.sin_port = htons(1234);
+
+    memset(addr,0,sizeof(addr));
+    strcpy(addr,local_input);
+    //printf("addr: %s\n",addr);
+    //string str(addr);
+    info.sin_addr.s_addr = inet_addr(addr);
+    info.sin_port = htons(port_input);
 
 
     int err = connect(sockfd,(struct sockaddr *)&info,sizeof(info));
@@ -75,6 +79,7 @@ int main(int argc, char *argv[])
     memset(copyreceive,0,sizeof(copyreceive));
     recv(sockfd,receiveMessage,sizeof(receiveMessage),0);
     close(sockfd);
+    //printf("this is test\n %s\n",receiveMessage);
     //strcat(output,receiveMessage);
     strcpy(copyreceive,receiveMessage);
 
@@ -83,7 +88,7 @@ int main(int argc, char *argv[])
 
     char* delim1 = "\n";
     char* pp = NULL;
-
+    int flag_for_empty_file = 0;
     pp = strtok(copyreceive,delim1);
     for(int i=0; i<4; i++) {
         if(i==1) {
@@ -91,54 +96,83 @@ int main(int argc, char *argv[])
             strcpy(content_line,pp);
             //printf("try recursive111:%c\n",content_line[14]);
         }
+
         if(content_line[14] == 'd') {
+            //printf("this is  d:%d\n",i);
+
             if(i==3) {
-                strcpy(dir_down,pp);
-                //printf("try recursive111:%s\n",dir_down);
+                if(pp == NULL) {
+                    //printf("ERROR:%d\n",i);
+                    flag_for_empty_file = -1;
+
+                } else {
+                    strcpy(dir_down,pp);
+                    //printf("try recursive111:%s\n",dir_down);
+                }
+
             }
         }
+        //printf("this is  \n");
+
         pp = strtok(NULL,delim1);
     }
 
     printf("%s\n",receiveMessage);
-
     pthread_t *threadyyptr[100];
-    if(content_line[14] == 'd') {
-        printf("GOGO\n");
-        //// if no inside??????????????????????????
-        char* delim111 = " ";
-        char* ppp = NULL;
-        char* ptrr[100000];
+    if(flag_for_empty_file == -1) {
 
-        ppp = strtok(dir_down,delim111);
-        tm = 0;
-        if(dir_down == NULL) {
-            printf(":)\n");
-        }
-        while(ppp!=NULL) {
-            ptrr[tm] = ppp;
-            //printf("ptrr[%d]:%s\n",tm,ptrr[tm]);
-            tm++;
-            ppp = strtok(NULL,delim111);
-        }
-        int j=0;
-        char requesttmp;
-        while(j<tm) {
-            memset(file_or_dir_tmp,0,sizeof(file_or_dir_tmp));
-            sprintf(file_or_dir_tmp,"%s/%s",file_or_dir,ptrr[j]);
-            //printf("\n()()()file_tmp:%s\n",file_or_dir_tmp);
-            memset(request,0,sizeof(request));
-            sprintf(request,"GET %s/%s HTTP/1.x\r\nHOST: %s:%s\r\n\r\n",file_or_dir,ptrr[j],local_input,port_input);
-            //printf("\ncheck:\n%s\n",request);
+        //printf("in dir\n");
+        char mk_path_tmp_for_empty[1000000] = {};
+        memset(mk_path_tmp_for_empty,0,sizeof(mk_path_tmp_for_empty));
+        sprintf(mk_path_tmp_for_empty,"output%s",file_or_dir);
+        //printf("\noutput p : %s\n",mk_path_tmp_for_empty);
+        _mkdir(mk_path_tmp_for_empty);
+    } else {
 
-            pthread_create(&threadyyptr[j],NULL,thread,file_or_dir_tmp);
-            j++;
-            //pthread_create(&(thread_poo[i]),NULL,threadpool_thread,(void*)&i);
-            sleep(1);
+
+        if(content_line[14] == 'd') {
+            //printf("GOGO\n");
+            //// if no inside??????????????????????????
+            char* delim111 = " ";
+            char* ppp = NULL;
+            char* ptrr[100000];
+
+            ppp = strtok(dir_down,delim111);
+            tm = 0;
+            /*
+            if(dir_down == NULL) {
+                //printf(":)\n");
+            }
+            */
+            while(ppp!=NULL) {
+                ptrr[tm] = ppp;
+                //printf("ptrr[%d]:%s\n",tm,ptrr[tm]);
+                tm++;
+                ppp = strtok(NULL,delim111);
+            }
+            int j=0;
+            char requesttmp;
+            while(j<tm) {
+                memset(file_or_dir_tmp,0,sizeof(file_or_dir_tmp));
+                sprintf(file_or_dir_tmp,"%s/%s",file_or_dir,ptrr[j]);
+
+                memset(request,0,sizeof(request));
+                sprintf(request,"GET %s/%s HTTP/1.x\r\nHOST: %s:%d\r\n\r\n",file_or_dir,ptrr[j],local_input,port_input);
+
+
+                pthread_create(&threadyyptr[j],NULL,thread,file_or_dir_tmp);
+                j++;
+                //pthread_create(&(thread_poo[i]),NULL,threadpool_thread,(void*)&i);
+                sleep(1);
+            }
+
         }
 
-    } else if(content_line[14] == 't' || content_line[14] == 'a') {
-        printf("MMM come in\n");
+
+
+    }
+    if(content_line[14] == 't' || content_line[14] == 'a') {
+        //printf("MMM come in\n");
 
         char mk_path_tmppp[1000000] = {};
         memset(mk_path_tmppp,0,sizeof(mk_path_tmppp));
@@ -213,7 +247,7 @@ void* thread(void* args)
     char request_tmp[100000];
     memset(request_tmp,0,sizeof(request_tmp));
 
-    sprintf(request_tmp,"GET %s HTTP/1.x\r\nHOST: %s:%s\r\n\r\n",tmp_path,local_input,port_input);
+    sprintf(request_tmp,"GET %s HTTP/1.x\r\nHOST: %s:%d\r\n\r\n",tmp_path,local_input,port_input);
 
     int socktmp=0;
     socktmp = socket(AF_INET, SOCK_STREAM, 0);
@@ -229,7 +263,7 @@ void* thread(void* args)
     infotmp.sin_family = AF_INET;
 
     //localhost test
-    infotmp.sin_addr.s_addr = inet_addr("127.0.0.1");
+    infotmp.sin_addr.s_addr = inet_addr(addr);
     infotmp.sin_port = htons(1234);
 
 
@@ -243,10 +277,10 @@ void* thread(void* args)
     memset(request_tmp,0,sizeof(request_tmp));
     char recvmsg_tmp[1000000];
     memset(recvmsg_tmp,0,sizeof(recvmsg_tmp));
-    printf("in thread2\n");
+    //printf("in thread2\n");
     recv(socktmp,recvmsg_tmp,sizeof(recvmsg_tmp),0);
     close(socktmp);
-    printf("in thread2\n");
+    //printf("in thread2\n");
     printf("%s\n",recvmsg_tmp);
     //printf("!!!!!!!!!GET from server : \n%s\nEND!!!!!!\n",recvmsg_tmp);
     char content_line_tmp[1000000]= {};
@@ -254,20 +288,29 @@ void* thread(void* args)
     char for_copy[100000]= {};
     char* delim1 = "\n";
     char* pp = NULL;
+    int flag_for_empty_file_in_th = 0;
     strcpy(for_copy,recvmsg_tmp);
     pp = strtok(for_copy,delim1);
     for(int i=0; i<4; i++) {
         if(i==1) {
             //printf("try recursive:%s\n",pp);
             strcpy(content_line_tmp,pp);
-            printf("try recursive111:%c\n",content_line[14]);
+            //printf("try recursive111:%c\n",content_line[14]);
         }
         if(content_line_tmp[14] == 'd') {
-            if(i==3) {
 
-                strcpy(dir_down_tmp,pp);
-                //printf("try recursive111:%s\n",dir_down_tmp);
+            /////////if dir is empty
+            if(i==3) {
+                if(pp == NULL) {
+                    //printf("ERROR:%d\n",i);
+                    flag_for_empty_file_in_th = -1;
+
+                } else {
+                    strcpy(dir_down_tmp,pp);
+                    //printf("try recursive111:%s\n",dir_down_tmp);
+                }
             }
+
         }
         pp = strtok(NULL,delim1);
     }
@@ -275,48 +318,61 @@ void* thread(void* args)
 
     pthread_t *threadyyptr[100];
     int tttt=0;
-    printf("RRR\n");
+    //printf("RRR\n");
     if(content_line_tmp[14] == 'd') {
-        printf("in dir\n");
-        char mk_path_tmp[1000000] = {};
-        memset(mk_path_tmp,0,sizeof(mk_path_tmp));
-        sprintf(mk_path_tmp,"output%s",tmp_path);
-        printf("\noutput p : %s\n",mk_path_tmp);
-        _mkdir(mk_path_tmp);
-        //printf("GOGO\n");
+        if(flag_for_empty_file_in_th == -1) {
+            char mk_path_tmp[1000000] = {};
+            memset(mk_path_tmp,0,sizeof(mk_path_tmp));
+            sprintf(mk_path_tmp,"output%s",tmp_path);
+            //printf("\noutput p : %s\n",mk_path_tmp);
+            _mkdir(mk_path_tmp);
 
-        char* delim111 = " ";
-        char* ppp = NULL;
-        char* ptrr[100000];
-        //int tttt=0;
-        ppp = strtok(dir_down_tmp,delim111);
-        while(ppp!=NULL) {
-            ptrr[tttt] = ppp;
-            //printf("ptrr[%d]:%s\n",tttt,ptrr[tttt]);
-            tttt++;
-            ppp = strtok(NULL,delim111);
+        } else {
+            //printf("in dir\n");
+            char mk_path_tmp[1000000] = {};
+            memset(mk_path_tmp,0,sizeof(mk_path_tmp));
+            sprintf(mk_path_tmp,"output%s",tmp_path);
+            //printf("\noutput p : %s\n",mk_path_tmp);
+            _mkdir(mk_path_tmp);
+            //printf("GOGO\n");
+
+            char* delim111 = " ";
+            char* ppp = NULL;
+            char* ptrr[100000];
+            //int tttt=0;
+            ppp = strtok(dir_down_tmp,delim111);
+            while(ppp!=NULL) {
+                ptrr[tttt] = ppp;
+                //printf("ptrr[%d]:%s\n",tttt,ptrr[tttt]);
+                tttt++;
+                ppp = strtok(NULL,delim111);
+            }
+            int j=0;
+            //char requesttmp;
+            while(j<tttt) {
+
+                memset(file_or_dir_tmp_in_th,0,sizeof(file_or_dir_tmp_in_th));
+                sprintf(file_or_dir_tmp_in_th,"%s/%s",tmp_path,ptrr[j]);
+                //printf("\n(th)()()file_tmp:%s\n", file_or_dir_tmp_in_th);
+
+
+                memset(request_tmp,0,sizeof(request_tmp));
+                sprintf(request_tmp,"GET %s/%s HTTP/1.x\r\nHOST: %s:%d\r\n\r\n",tmp_path,ptrr[j],local_input,port_input);
+                //printf("\ncheck in th:\n%s\n",request_tmp);
+
+                pthread_create(&threadyyptr[j],NULL,thread,file_or_dir_tmp_in_th);
+                j++;
+                //pthread_create(&(thread_poo[i]),NULL,threadpool_thread,(void*)&i);
+                sleep(1);
+            }
+
+
+
         }
-        int j=0;
-        //char requesttmp;
-        while(j<tttt) {
 
-            memset(file_or_dir_tmp_in_th,0,sizeof(file_or_dir_tmp_in_th));
-            sprintf(file_or_dir_tmp_in_th,"%s/%s",tmp_path,ptrr[j]);
-            //printf("\n(th)()()file_tmp:%s\n", file_or_dir_tmp_in_th);
-
-
-            memset(request_tmp,0,sizeof(request_tmp));
-            sprintf(request_tmp,"GET %s/%s HTTP/1.x\r\nHOST: %s:%s\r\n\r\n",tmp_path,ptrr[j],local_input,port_input);
-            //printf("\ncheck in th:\n%s\n",request_tmp);
-
-            pthread_create(&threadyyptr[j],NULL,thread,file_or_dir_tmp_in_th);
-            j++;
-            //pthread_create(&(thread_poo[i]),NULL,threadpool_thread,(void*)&i);
-            sleep(1);
-        }
 
     } else if(content_line_tmp[14] == 't' || content_line_tmp[14] == 'a') {
-        printf("comie in\n");
+        //printf("comie in\n");
 
         char copyreceivee_th[100000] = {};
         strcpy(copyreceivee_th,recvmsg_tmp);
@@ -333,13 +389,13 @@ void* thread(void* args)
                 //sprintf(gett,"%s\n",ppr);
                 strcat(gett_th,ppr_th);
                 strcat(gett_th,"\n");
-                printf("try recursive:%s\n",ppr_th);
+                //printf("try recursive:%s\n",ppr_th);
                 //ppr = strtok(NULL,delim15);
             }
             ppr_th = strtok(NULL,delim15_th);
             c_th++;
         }
-        printf("\ntry recursive55:\n%s\n",gett_th);
+        //printf("\ntry recursive55:\n%s\n",gett_th);
 
 
         char path_in_write_th[1000000]= {};

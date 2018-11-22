@@ -25,13 +25,6 @@ char message[] = {"Hi,this is server\n"};
 char *file_or_dir;
 char *host_input;
 char buffer[2000000];
-//char ch;
-////////////////////////////
-
-//path name error !!
-// testdir/secfoleder/trifolder
-
-///////////////////////////1
 void* thread(void* args);
 void* threadpool_thread(void* args);
 void Push(int data);
@@ -52,17 +45,21 @@ int Q_NUM = 0;
 int thread_number = 10;
 int gan;
 char pathname[256];
-
-
+int thread_number_input;
+int port;
 int main(int argc, char *argv[])
 {
 
     //usage : ./server -r root -p port -n thread number
     root = argv[2];
+    port = atoi(argv[4]);
+    thread_number_input = atoi(argv[6]);
+    //port = atoi(argv[4]);
     //memset(msg,0,sizeof(msg));
     memset(msg,'\0',strlen(msg));
 
-
+    printf("THTH:%d\n",thread_number_input);
+    printf("PORT:%d\n",port);
     //set up socket
     //char inputBuffer[256] = {};
     char message[] = {"Hi,this is server.\n"};
@@ -80,7 +77,7 @@ int main(int argc, char *argv[])
     //SERVER
     serverInfo.sin_family = AF_INET;
     serverInfo.sin_addr.s_addr = inet_addr("127.0.0.1");
-    serverInfo.sin_port = htons(1234);
+    serverInfo.sin_port = htons(port);
 
     bind(sockfd,(struct sockaddr *)&serverInfo,sizeof(serverInfo));
     listen(sockfd,5);
@@ -92,8 +89,8 @@ int main(int argc, char *argv[])
 
     //thread pool
     ////////////////////////////////////////////////////////////////////////////////////////////
-    pthread_t *thread_pool = (pthread_t *)malloc(sizeof(pthread_t) * thread_number);
-    for(int i=0; i<thread_number; i++) {
+    pthread_t *thread_pool = (pthread_t *)malloc(sizeof(pthread_t) * thread_number_input);
+    for(int i=0; i<thread_number_input; i++) {
         pthread_create(&(thread_pool[i]),NULL,threadpool_thread,(void*)&i);
         usleep(2000);
         printf("FUCK\n");
